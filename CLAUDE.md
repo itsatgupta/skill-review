@@ -13,6 +13,8 @@ A tool that reviews Claude Agent Skills (SKILL.md packages) built by the Bravura
 | `api/claude.js` | Vercel function that proxies AI calls to the Anthropic API. |
 | `cli/review.cjs` | Static review from the command line and CI. |
 | `scripts/aggregate-evals.cjs` | Turns graded eval runs into `benchmark.json` / `benchmark.md`. |
+| `scripts/eval-case.cjs` | Per-case eval helpers: checks that runner outputs exist, blinds them for grading, unblinds the grade, and records failed cases. |
+| `scripts/summarize.cjs` | Builds the plain-language overall report `reports/<skill>/summary.md` from the review, evals and latest benchmark. |
 | `tests/engine.test.cjs` | node:test suite for the engine. |
 | `skills/` | Drop team skills here to review them (one folder per skill). Not shipped. |
 | `reports/<skill>/` | Review and eval output. Git-ignored. |
@@ -23,6 +25,7 @@ A tool that reviews Claude Agent Skills (SKILL.md packages) built by the Bravura
 - `npm run review -- <path>`: static review of one skill or a whole repo. Add `--out=reports` to save it.
 - `npm run review:all`: review everything under `skills/`.
 - `npm run evals:aggregate -- reports/<skill>/iteration-<n>`: build the benchmark.
+- `npm run summary -- reports/<skill>`: rebuild the overall summary (`reports/<skill>/summary.md`). `/review-skill`, `/draft-evals` and `/run-evals` each run this as their last step, so the summary is always current.
 - `npm run dev` / `npm run deploy`: Vercel (needs the Vercel CLI and `vercel login`).
 
 ## Slash commands (project skills in `.claude/skills/`)

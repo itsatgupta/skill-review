@@ -25,6 +25,9 @@ You run exactly one eval case and save what you produce. You will be told:
 
 ## Save
 
-1. Write `<out_dir>/output.md`: the final answer exactly as you would give it to the user.
+1. Write `<out_dir>/output.md` with the Write tool: the final answer exactly as you would give it to the user. Describing the answer in your reply does not save it.
 2. Write `<out_dir>/timing.json`: `{"duration_s": <seconds, estimate>, "tool_calls": <count>}`.
-3. Reply with a single line: `done <out_dir>`.
+3. **Verify before you report.** Read both files back. If either is missing or `output.md` is empty, write it again and re-check once.
+4. Reply with a single line:
+   - `done <out_dir>` only when both files exist and `output.md` contains your full answer.
+   - `error <out_dir>: <what went wrong>` otherwise. Never report `done` for a file you have not read back.

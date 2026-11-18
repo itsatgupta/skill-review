@@ -2,7 +2,7 @@
 name: draft-evals
 description: Drafts an eval suite for a Claude Agent Skill (task cases with checkable assertions, plus should-trigger and near-miss trigger queries) and writes evals/evals.json inside the skill. Use when a skill has no evals, or the user asks to create, write or extend evals or test cases for a skill.
 argument-hint: <path-to-skill-folder>
-allowed-tools: Read, Grep, Glob, Write, Bash(mkdir:*), Bash(ls:*)
+allowed-tools: Read, Grep, Glob, Write, Bash(node cli/review.cjs:*), Bash(node scripts/summarize.cjs:*), Bash(mkdir:*), Bash(ls:*)
 ---
 
 # Draft evals for a skill
@@ -40,6 +40,8 @@ Target skill: `$ARGUMENTS`. Read its `SKILL.md`, its linked references and any e
 - **10–16 trigger queries**: about 60% should trigger (varied phrasing: terse, indirect, with typos, naming the artifact rather than the skill). About 40% are near-misses that share keywords but belong to another skill or to no skill (for example, "write unit tests for this PR" for a review skill).
 
 Finish with a short summary in chat: how many cases of each kind, and which of the skill's rules have no case yet.
+
+Then **always refresh the overall summary** (the last step, every time): if `reports/<name>/static.json` exists, run `node cli/review.cjs <skill path> --out=reports --fail-on=none` so the static score counts the new evals, then `node scripts/summarize.cjs reports/<name> --skill=<skill path>`. Give the path to `reports/<name>/summary.md` in chat. If there is no `static.json`, skip this and suggest `/review-skill`.
 
 ## Example
 

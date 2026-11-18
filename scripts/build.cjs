@@ -8,7 +8,7 @@ const rd = p => fs.readFileSync(path.join(root, p), 'utf8');
 const engine = rd('src/engine.cjs').replace(/if \(typeof module !== 'undefined'\) module\.exports = SR_ENGINE;/, '');
 const cfgPath = path.join(root, 'skill-review.config.json');
 const config = fs.existsSync(cfgPath) ? JSON.parse(fs.readFileSync(cfgPath, 'utf8')) : {};
-const webConfig = { rules: config.rules || [], allowedHosts: config.allowedHosts || [], weights: config.weights || {}, passScore: config.passScore || 75 };
+const webConfig = { rules: config.rules || [], allowedHosts: config.allowedHosts || [], weights: config.weights || {}, passScore: config.passScore || 75, platforms: config.platforms || [] };
 const tpl = rd('src/web/index.template.html');
 if (!tpl.includes('/*__ENGINE__*/') || !tpl.includes('/*__BOOT__*/')) { console.error('Template placeholders missing'); process.exit(1); }
 const make = (boot, noAi) => tpl

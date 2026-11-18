@@ -115,7 +115,7 @@ pre,.scroll{overflow-x:auto}code{overflow-wrap:anywhere}
 const SR_ENGINE = (() => {
   const DEP_DIRS = /(^|\/)(node_modules|\.venv|venv|__pycache__|\.git|dist|build|\.next|target|\.gradle|site-packages)(\/|$)/;
   const JUNK = /(^|\/)(~\$[^/]*|\.DS_Store|Thumbs\.db|desktop\.ini|[^/]*\.swp|[^/]*~)$/i;
-  const TEXT_EXT = /\.(md|markdown|txt|json|ya?ml|py|sh|bash|ps1|js|mjs|cjs|ts|tsx|jsx|html|css|xml|toml|ini|cfg|env|example|sql|java|rb|go|rs|csv)$/i;
+  const TEXT_EXT = /\.(md|mdc|markdown|txt|json|ya?ml|py|sh|bash|ps1|js|mjs|cjs|ts|tsx|jsx|html|css|xml|toml|ini|cfg|env|example|sql|java|rb|go|rs|csv)$/i;
   const SCRIPT_EXT = /\.(py|sh|bash|ps1|js|mjs|cjs|ts)$/i;
   const BINARY_DOC = /\.(docx?|pptx?|xlsx?|pdf)$/i;
   const SEV_W = { blocker: 40, major: 15, minor: 5, info: 0 };
@@ -144,14 +144,18 @@ const SR_ENGINE = (() => {
   function parseFrontmatter(text) {
     const m = /^﻿?---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(text);
     if (!m) return null;
-    const fm = {}; let key = null;
-    for (const ln of lines(m[1])) {
+    const fm = {}, listOk = {}, invalid = []; let key = null;
+    lines(m[1]).forEach((ln, i) => {
+      if (!ln.trim() || /^#/.test(ln)) return; // blank lines and column-0 comments are valid YAML
       const kv = /^([A-Za-z0-9_-]+):\s*(.*)$/.exec(ln);
-      if (kv) { key = kv[1]; fm[key] = kv[2].replace(/^["']|["']$/g, '').trim(); }
+      if (kv) { key = kv[1]; fm[key] = kv[2].replace(/^["']|["']$/g, '').trim(); listOk[key] = fm[key] === ''; }
       else if (key && /^\s+\S/.test(ln)) fm[key] += (fm[key] && !/^[>|]$/.test(fm[key]) ? ' ' : '') + ln.trim();
-    }
-    for (const k in fm) fm[k] = fm[k].replace(/^[>|]-?\s*/, '');
-    return { fm, body: text.slice(m[0].length), fmLines: lines(m[0]).length - 1 };
+      else if (key && /^-\s/.test(ln) && listOk[key]) { /* a list at the key's own indentation is valid YAML */ }
+      else invalid.push({ line: i + 2, text: ln.trim() }); // +2: the opening --- is line 1
+    });
+    const emptyBlocks = Object.keys(fm).filter(k => /^[>|][-+]?$/.test(fm[k]));
+    for (const k in fm) fm[k] = fm[k].replace(/^[>|][-+]?\s*/, '');
+    return { fm, body: text.slice(m[0].length), fmLines: lines(m[0]).length - 1, invalid, emptyBlocks };
   }
 
   function mdLinks(text) {
@@ -187,6 +191,10 @@ const SR_ENGINE = (() => {
 
     /* ---------- Metadata & triggering ---------- */
     if (!parsed) add('meta', 'blocker', 'M1', 'Frontmatter missing or malformed', 'SKILL.md does not start with a --- YAML block ---.', 'Start SKILL.md with YAML frontmatter containing name and description.', 'spec');
+    if (parsed && parsed.invalid.length) {
+      const v = parsed.invalid[0];
+      add('meta', 'blocker', 'M9', 'Frontmatter is not valid YAML', `line ${v.line}: "${v.text.slice(0, 70)}" is not a key: value pair or an indented continuation${parsed.invalid.length > 1 ? ` (+${parsed.invalid.length - 1} more line${parsed.invalid.length > 2 ? 's' : ''})` : ''}, so the frontmatter fails to parse and the skill may not load at all.`, 'Indent continuation lines under their key, or move the text into the body below the closing ---.', 'spec');
+    }
     if (!fm.name) add('meta', 'blocker', 'M2', 'name field missing', 'Frontmatter has no name.', 'Add name: lowercase-with-hyphens (max 64 characters).', 'spec');
     else {
       if (fm.name.length > 64) add('meta', 'major', 'M2a', 'name longer than 64 characters', `"${fm.name}" is ${fm.name.length} characters.`, 'Shorten the name to 64 characters or fewer.', 'spec');
@@ -194,7 +202,13 @@ const SR_ENGINE = (() => {
       if (/anthropic|claude/i.test(fm.name)) add('meta', 'major', 'M2c', 'name uses a reserved word', `"${fm.name}" contains "claude" or "anthropic".`, 'Remove the reserved word from the name.', 'spec');
       if (root && base(root) !== fm.name) add('meta', 'minor', 'M2d', 'name does not match its folder', `Folder "${base(root)}" vs name "${fm.name}".`, 'Rename the folder or the name so they match.', 'spec');
     }
-    if (!desc) add('meta', 'blocker', 'M3', 'description missing', 'Without a description Claude has nothing to decide when to use the skill.', 'Write a third-person description that says what the skill does and when to use it.', 'spec');
+    if (!desc) {
+      const emptyBlock = parsed && parsed.emptyBlocks.includes('description');
+      add('meta', 'blocker', 'M3', 'description missing', emptyBlock
+        ? '`description: >-` (or `|`) is followed by unindented lines, so YAML reads the description as empty. Without a description Claude has nothing to decide when to use the skill.'
+        : 'Without a description Claude has nothing to decide when to use the skill.',
+        emptyBlock ? 'Indent the description text under `description:` (or write it on one line), and keep it to what the skill does and when to use it.' : 'Write a third-person description that says what the skill does and when to use it.', 'spec');
+    }
     else {
       if (desc.length > 1024) add('meta', 'major', 'M3a', 'description longer than 1024 characters', `${desc.length} characters.`, 'Cut it to 1024 or fewer; keep only what helps Claude pick the skill.', 'spec');
       if (/<[a-z/][^>]*>/i.test(desc)) add('meta', 'major', 'M3b', 'description contains XML/HTML tags', 'Tags in the description are not allowed by the spec.', 'Remove angle-bracket tags from the description.', 'spec');
@@ -229,7 +243,35 @@ const SR_ENGINE = (() => {
     const linked = new Set();
     const broken = [];
     for (const l of links) { if (byRel.has(l)) linked.add(l); else broken.push(l); }
-    if (outside.length) add('struct', 'major', 'S4b', 'Depends on files outside the skill folder', outside.slice(0, 4).join(', '), 'The skill breaks when installed on its own. Bundle the needed files, or name the companion skill as a stated prerequisite and say what to do when it is absent.');
+    // Files in the upload that sit outside the skill folder (e.g. a rules/ folder next to it)
+    const parent = dir(root);
+    const besides = root ? own.filter(f => !f.path.startsWith(root + '/') && f.path !== skill.path) : [];
+    const besideRel = f => '../' + (parent && f.path.startsWith(parent + '/') ? f.path.slice(parent.length + 1) : f.path);
+    // Paths written in the text (not only links) that point outside the folder or into another tool's workspace
+    const selfName = fm.name || base(root);
+    // Where the team runs its skills (config.platforms). With Cursor as the only platform, .cursor/ workspace paths are normal.
+    const platforms = (config.platforms && config.platforms.length ? config.platforms : ['claude']).map(x => String(x).toLowerCase());
+    const cursorOnly = platforms.every(x => x === 'cursor');
+    const cursorRules = new Set();
+    const mentionRe = /(?:^|[\s`'"(\[])((?:\.\.[\\/]|~[\\/]|\.(?:cursor|claude|github|vscode|windsurf)[\\/])[^\s`'")\]<>,;]+)/g;
+    const selfPaths = new Set(), mentioned = new Set();
+    const proseBody = bodyLines.filter(l => !/^\s*>/.test(l)).join('\n'); // quoted examples (> lines) are not dependencies
+    for (const mm of proseBody.matchAll(mentionRe)) {
+      const p0 = mm[1].replace(/\\/g, '/').replace(/[.:]+$/, '');
+      if (selfName && p0.includes(`skills/${selfName}/`)) selfPaths.add(p0);
+      else if (cursorOnly && /^\.cursor\/rules\//.test(p0)) cursorRules.add(p0);
+      else if (!byRel.has(norm(p0))) mentioned.add(p0);
+    }
+    const outsideAll = [...new Set([...outside, ...mentioned])];
+    if (outsideAll.length) {
+      const shipped = outsideAll.filter(p0 => besides.some(f => base(f.path) === base(p0)));
+      add('struct', 'major', 'S4b', 'Depends on files outside the skill folder', outsideAll.slice(0, 4).join(', ') + (outsideAll.length > 4 ? ` (+${outsideAll.length - 4} more)` : '') + (shipped.length ? `. ${shipped.length} of these ${shipped.length === 1 ? 'was' : 'were'} shipped next to the skill folder, not inside it.` : '.'), 'The skill breaks when installed on its own. Move the files into the skill folder and link them from SKILL.md, or name the companion skill as a stated prerequisite and say what to do when it is absent.');
+    }
+    if (cursorRules.size) {
+      const missing = [...cursorRules].filter(p0 => !besides.some(f => base(f.path) === base(p0)));
+      add('struct', missing.length ? 'major' : 'minor', 'S12', 'Depends on Cursor workspace rules', `${cursorRules.size} rule file${cursorRules.size > 1 ? 's' : ''} under .cursor/rules/: ${[...cursorRules].slice(0, 3).join(', ')}${cursorRules.size > 3 ? ` (+${cursorRules.size - 3} more)` : ''}. ${missing.length ? `${missing.length} ${missing.length === 1 ? 'is' : 'are'} not shipped with the skill: ${missing.slice(0, 3).join(', ')}.` : 'All of them are shipped with the skill.'}`, missing.length ? 'Ship the missing rule files with the skill, or say in SKILL.md what to do when they are absent.' : 'Fine for Cursor. Say in SKILL.md that these rules must be in the workspace, and keep them versioned together with the skill.');
+    }
+    if (selfPaths.size) add('struct', cursorOnly ? 'info' : 'minor', 'S11', 'Hard-coded install path to the skill\'s own folder', [...selfPaths].slice(0, 3).join(', '), 'Use a path relative to the skill folder (for example scripts/x.ps1). The install location differs between Claude Code, Claude.ai, Cursor and other machines.');
     // plain-name mentions also count as references
     for (const f of own) if (f.rel !== skill.rel && body.includes(base(f.rel))) linked.add(f.rel);
     if (broken.length) add('struct', 'major', 'S4', 'Broken links in SKILL.md', [...new Set(broken)].slice(0, 6).join(', '), 'Fix the paths or add the missing files.');
@@ -315,6 +357,27 @@ const SR_ENGINE = (() => {
     }
     if (danger.length) add('pack', 'major', 'P8', 'Scripts with destructive or remote-exec commands', danger.slice(0, 4).join('; '), 'Remove them or gate them behind explicit confirmation and document why.', 'sec');
     const unref = scripts.filter(f => !body.includes(base(f.rel)));
+    if (besides.length) {
+      const used = besides.filter(f => body.includes(base(f.path)));
+      const cursorLayout = cursorOnly && besides.every(f => /\.mdc$/i.test(f.path) && body.includes(base(f.path)));
+      if (cursorLayout) add('pack', 'info', 'P10', 'Cursor rules shipped next to the skill folder', `${besides.length} .mdc file${besides.length > 1 ? 's' : ''} beside the skill (the Cursor .cursor/rules/ layout): ${besides.map(besideRel).slice(0, 4).join(', ')}${besides.length > 4 ? ` (+${besides.length - 4} more)` : ''}.`, 'Fine for Cursor. They are also reviewed for approval bypass (P11).', 'bp');
+      else add('pack', used.length ? 'major' : 'minor', 'P10', 'Files shipped outside the skill folder', `${besides.length} file${besides.length > 1 ? 's' : ''} next to the skill folder${used.length ? `, ${used.length} of them named in SKILL.md` : ''}: ${besides.map(besideRel).slice(0, 4).join(', ')}${besides.length > 4 ? ` (+${besides.length - 4} more)` : ''}.`, used.length ? 'Move them inside the skill folder (for example reference/) and link them from SKILL.md. Installing the skill copies only its own folder.' : 'Move them into the skill if it needs them, or leave them out of the upload.', 'bp');
+    }
+    // Instructions that skip approval prompts or work around a safety reviewer
+    const strip = l => l.replace(/\*\*|`/g, '');
+    const negatedVerb = l => /\b(never|do not|don't|must not|should not|cannot)\b[^.\n]{0,25}\b(bypass|circumvent|skip|disable|work around|get around|get past|retry)\b/i.test(l);
+    const BYPASS = [
+      ['skips the approval prompt', l => /\b(do not|don't|never)\s+(wait (for|on)|ask for|request|show|seek)\b[^.\n]{0,40}\b(approval|permission)/i.test(l) || /\b(never|do not|don't)\s+set\s+requestSmartModeApproval|requestSmartModeApproval\s*[:=]\s*false/i.test(l)],
+      ['retries after a block', l => !negatedVerb(l) && (/\bretry\b[^.\n]{0,60}\b(auto-?review|blocked|denied|rejected)\b/i.test(l) || /\b(auto-?review|blocks?|blocked|denied|rejected)\b[^.\n]{0,60}\bretry\b/i.test(l))],
+      ['works around a review or permission check', l => !negatedVerb(l) && /\b(bypass|circumvent|get (past|around)|work around|disable)\b[^.\n]{0,30}\b(approval|permission|confirmation|safety|guardrails?|auto-?review|reviewer|sandbox)/i.test(l)],
+      ['uses permission-skipping flags', l => /dangerously-?skip-?permissions|dangerouslyDisableSandbox|--yolo\b/i.test(l)],
+      ['treats a message as standing approval', l => /\b(message|prompt|request|rule|invocation)\s+is\s+(the\s+)?(permission|approval|consent)\b/i.test(l)],
+    ];
+    const bypassHits = [], bypassKinds = new Set();
+    for (const f of [skill, ...own.filter(f => f !== skill && f.text && /\.(md|mdc|markdown|txt)$/i.test(f.path))]) {
+      lines(f.text || '').forEach((l, i) => { const t = strip(l); for (const [kind, test] of BYPASS) if (test(t)) { bypassKinds.add(kind); bypassHits.push(`${f === skill ? 'SKILL.md' : (besides.includes(f) ? besideRel(f) : f.rel)}:${i + 1} "${t.trim().slice(0, 70)}"`); break; } });
+    }
+    if (bypassHits.length) add('pack', bypassKinds.size >= 2 ? 'blocker' : 'major', 'P11', 'Instructions skip approval or work around a safety check', `${[...bypassKinds].join('; ')}. ${bypassHits.slice(0, 3).join(' · ')}${bypassHits.length > 3 ? ` (+${bypassHits.length - 3} more)` : ''}`, 'Remove them. Before any write to an external system, list what will change and get explicit confirmation. If a call is blocked, stop and report it instead of retrying around the block.', 'sec');
     if (unref.length) add('pack', 'info', 'P9', 'Scripts that SKILL.md never mentions', unref.map(f => f.rel).slice(0, 5).join(', '), 'Say in SKILL.md when to run each script (and whether to run or read it), or remove it.', 'bp');
 
     /* ---------- Team rules from skill-review.config.json ---------- */
@@ -331,13 +394,13 @@ const SR_ENGINE = (() => {
 
     /* ---------- Evaluation readiness ---------- */
     const evalFiles = own.filter(f => /(^|\/)(evals?|tests?)\/.*\.(json|ya?ml|md)$|evals?\.json$/i.test(f.rel));
-    let cases = [], parsedEval = false;
-    for (const f of evalFiles) { try { const j = JSON.parse(f.text || ''); const arr = Array.isArray(j) ? j : (j.evals || j.cases || j.tests || []); if (Array.isArray(arr)) { cases = cases.concat(arr); parsedEval = true; } } catch (e) { /* not json */ } }
+    let cases = [], triggers = [], parsedEval = false;
+    for (const f of evalFiles) { try { const j = JSON.parse(f.text || ''); const arr = Array.isArray(j) ? j : (j.evals || j.cases || j.tests || []); if (Array.isArray(arr)) { cases = cases.concat(arr); parsedEval = true; } if (Array.isArray(j.trigger_evals)) triggers = triggers.concat(j.trigger_evals); } catch (e) { /* not json */ } }
     if (!evalFiles.length) add('evals', 'major', 'E1', 'No evals shipped with the skill', 'No evals/ folder or evals.json found, so nobody can show the skill works, or that a change did not break it.', 'Add evals/evals.json with realistic prompts, expected outputs and assertions (the app below can draft them).', 'eval');
     else {
       strengths.push(`Ships eval files (${evalFiles.length}).`);
       if (parsedEval && cases.length < 3) add('evals', 'major', 'E2', 'Fewer than 3 eval cases', `${cases.length} case(s).`, 'Cover the main task, at least one edge case and one near-miss prompt.', 'eval');
-      if (parsedEval && !cases.some(c => c.should_trigger === false || /negative|near.?miss|should not/i.test(JSON.stringify(c)))) add('evals', 'minor', 'E3', 'No negative / near-miss trigger cases', 'All cases assume the skill should fire.', 'Add prompts that look similar but should not use this skill.', 'eval');
+      if (parsedEval && !triggers.some(t => t.should_trigger === false) && !cases.some(c => c.should_trigger === false || /negative|near.?miss|should not/i.test(JSON.stringify(c)))) add('evals', 'minor', 'E3', 'No negative / near-miss trigger cases', 'All cases assume the skill should fire.', 'Add prompts that look similar but should not use this skill.', 'eval');
       if (parsedEval && cases.length && !cases.some(c => c.assertions || c.expectations || c.expected_output)) add('evals', 'minor', 'E4', 'Eval cases have no expected output or assertions', 'Cases can be run but not graded.', 'Add expected_output and checkable assertions to each case.', 'eval');
     }
     if (!/\b(if|when)\b[^.\n]{0,60}\b(missing|fails?|error|not found|empty|invalid|unavailable)\b/i.test(body)) add('evals', 'minor', 'E5', 'Failure paths not described', 'No instructions for missing input, tool failures or empty results.', 'Say what to do when input is missing, a fetch fails or there is nothing to report.');
@@ -370,7 +433,7 @@ const SR_ENGINE = (() => {
 <script>
 {
 const SAMPLE = null;
-const CONFIG = {"rules":[{"id":"T1","title":"No credentials or PATs pasted into instructions","type":"forbid","file":"any","pattern":"(personal access token|PAT)\\s*[:=]\\s*[A-Za-z0-9_\\-]{20,}","severity":"blocker","category":"pack","fix":"Remove the token, rotate it, and read it from an environment variable."},{"id":"T2","title":"Skill states its target surface (Claude Code, Claude.ai, Cursor)","type":"require","file":"any","pattern":"claude code|claude\\.ai|cursor|agent sdk","severity":"info","category":"content","fix":"Say where the skill is meant to run, and which tools it expects."},{"id":"T3","title":"Read-only intent is explicit for review skills","when":"review|audit|inspect","type":"require","file":"SKILL.md","pattern":"read-only|do not (edit|modify|commit)|never (edit|commit|push)","severity":"minor","category":"content","fix":"Review and audit skills should say they do not change code, and when changes are allowed."}],"allowedHosts":["bravurasolutions.net","bravurasolutions.com","atlassian.net"],"weights":{"meta":25,"struct":20,"content":20,"pack":15,"evals":20},"passScore":75};
+const CONFIG = {"rules":[{"id":"T1","title":"No credentials or PATs pasted into instructions","type":"forbid","file":"any","pattern":"(personal access token|PAT)\\s*[:=]\\s*[A-Za-z0-9_\\-]{20,}","severity":"blocker","category":"pack","fix":"Remove the token, rotate it, and read it from an environment variable."},{"id":"T2","title":"Skill states its target surface (Claude Code, Claude.ai, Cursor)","type":"require","file":"any","pattern":"claude code|claude\\.ai|cursor|agent sdk","severity":"info","category":"content","fix":"Say where the skill is meant to run, and which tools it expects."},{"id":"T3","title":"Read-only intent is explicit for review skills","when":"^(reviews?|audits?|inspects?)\\b","type":"require","file":"SKILL.md","pattern":"read-only|do not (edit|modify|commit)|never (edit|commit|push)","severity":"minor","category":"content","fix":"Review and audit skills should say they do not change code, and when changes are allowed."}],"allowedHosts":["bravurasolutions.net","bravurasolutions.com","atlassian.net"],"weights":{"meta":25,"struct":20,"content":20,"pack":15,"evals":20},"passScore":75,"platforms":["cursor"]};
 const NO_AI_MSG = "AI features are off: the server has no ANTHROPIC_API_KEY set. The static report above still works.";
 const DECOYS = [
  ['docx','Creates, reads and edits Word documents (.docx). Use when the user mentions Word files or wants a .docx.'],

@@ -31,9 +31,13 @@ Return only this JSON (no prose before or after):
 {
   "summary": "2-3 sentences: verdict and biggest risk",
   "rubric": [{"dimension": "Trigger precision", "score": 4, "rationale": "cite section or quote <20 words"}],
-  "issues": [{"severity": "major|minor", "title": "short", "evidence": "file + section or short quote", "fix": "concrete change"}],
+  "issues": [{"severity": "major|minor", "title": "short", "evidence": "file + section or short quote", "fix": "concrete change", "covers": ["IDs of static findings that describe the same problem, e.g. P11; omit if none"]}],
   "strengths": ["at most 4"]
 }
 ```
 
 `rubric` must contain all 7 dimensions, in the order listed above.
+
+If you are told the target platforms (for example Cursor), judge portability only against those. Paths, rule files and tool names that are normal on a listed platform (for Cursor: `.cursor/skills/`, `.cursor/rules/*.mdc`, Cursor MCP calls) are not defects. Safety controls on that platform, such as approval prompts and auto-review, still count as safety controls.
+
+When an issue is the same problem as a finding in the static report (for example, your approval-bypass issue and static P11), list that finding's ID in `covers`. The overall summary then shows the problem once, with your fuller evidence.

@@ -2,7 +2,7 @@
 name: run-evals
 description: Runs real, tool-using A/B evals for a Claude Agent Skill. Each case runs with the skill and without it (baseline) through eval-runner subagents, is graded blind by eval-grader, and is aggregated into a benchmark with an eval gate. Use when the user asks whether a skill works, is reliable, or beats no skill, or runs /run-evals with a skill path.
 argument-hint: <path-to-skill-folder> [case ids, e.g. 1,3]
-allowed-tools: Read, Grep, Glob, Write, Bash(node scripts/aggregate-evals.cjs:*), Bash(mkdir:*), Bash(ls:*), Bash(cp:*)
+allowed-tools: Read, Grep, Glob, Write, Bash(node scripts/aggregate-evals.cjs:*), Bash(node scripts/eval-case.cjs:*), Bash(node scripts/summarize.cjs:*), Bash(mkdir:*), Bash(ls:*), Bash(cp:*)
 ---
 
 # Run evals for a skill
@@ -22,13 +22,15 @@ For each selected case, create `iteration-<n>/case-<id>/with_skill/` and `.../wi
 - one with `mode: with_skill`, `skill_path`, the case prompt, fixture paths, `out_dir: .../with_skill`
 - one with `mode: without_skill`, the same prompt and fixtures, `out_dir: .../without_skill`
 
-Run up to 3 cases (6 subagents) at a time. If a runner fails, retry it once, then record the case as `error` and continue.
+Run up to 3 cases (6 subagents) at a time.
+
+**Check the files, not the reply.** A runner can say `done` without having saved anything. When both runners of a case have finished, run `node scripts/eval-case.cjs check iteration-<n>/case-<id>`. If it fails, or a runner replied `error`, re-run only the failing runner once (tell it the previous attempt saved nothing). If it fails again, run `node scripts/eval-case.cjs error iteration-<n>/case-<id> "<reason>"` and move on. The benchmark lists that case as not graded.
 
 ## Blind grading (per case)
 
-Flip a coin for each case. Label one output **A** and the other **B**, and keep the mapping only in `iteration-<n>/case-<id>/mapping.json` (`{"A": "with_skill", "B": "without_skill"}`). Give `eval-grader` the prompt, `expected_output`, assertions, the two output paths labelled A and B, and `out_file: .../raw-grade.json`. Do not tell it which is which.
+Run `node scripts/eval-case.cjs blind iteration-<n>/case-<id>`. It checks both outputs again, flips a coin, saves the mapping to `mapping.json`, and copies the outputs to `blind/A.md` and `blind/B.md`. Give `eval-grader` the prompt, `expected_output`, the assertions, **only the two `blind/` paths** and `out_file: .../raw-grade.json`. Never pass the `with_skill/` or `without_skill/` paths, because the folder names give the answer away. Do not tell the grader which is which.
 
-Then un-blind: from `raw-grade.json` and `mapping.json`, write `case-<id>/grading.json` as `{"with_skill": [...], "without_skill": [...], "notes": "...with 'A'/'B' replaced by 'with skill'/'without skill'"}`.
+When the grade is saved, run `node scripts/eval-case.cjs unblind iteration-<n>/case-<id>`. It writes `grading.json` as `{"with_skill": [...], "without_skill": [...], "notes": "..."}`, with A and B in the notes replaced by "with skill" and "without skill". If you re-blind a case (for example after a retry), grade it again: `blind` deletes the old `raw-grade.json`, because it matched the previous coin flip.
 
 ## Trigger routing
 
@@ -39,6 +41,7 @@ If `trigger_evals` exist: build a catalogue of this skill's description plus eve
 1. Run `node scripts/aggregate-evals.cjs reports/<name>/iteration-<n>`.
 2. In chat, give: the eval gate (PASS or HOLD), with-skill vs without-skill pass rates and uplift, trigger accuracy/precision/recall, the 2–3 cases where the skill lost or tied with an explanation from the grader notes, and the path to `benchmark.md`.
 3. If an earlier iteration exists, compare the two in one line (better, worse or flat).
+4. **Always refresh the overall summary** (the last step, every run): `node scripts/summarize.cjs reports/<name> --skill=<skill path>`. It writes `reports/<name>/summary.md`, a plain-language report of what is good and bad across the review, the tests and the results. Give its path in chat as well. If `static.json` is missing, say so and suggest `/review-skill` first.
 
 ## Interpreting results
 
@@ -50,4 +53,4 @@ If `trigger_evals` exist: build a catalogue of this skill's description plus eve
 
 `/run-evals skills/sonata-code-review` ends with a reply like:
 
-> **Eval gate: PASS**. With skill 82% vs without 51% (+31 pts) over 6 cases; trigger accuracy 88% (precision 100%, recall 80%). The skill tied on case 5 (empty diff): both answered "nothing to review". Benchmark: `reports/sonata-code-review/iteration-2/benchmark.md` (iteration 1: +24 pts, so better).
+> **Eval gate: PASS**. With skill 82% vs without 51% (+31 pts) over 6 cases; trigger accuracy 88% (precision 100%, recall 80%). The skill tied on case 5 (empty diff): both answered "nothing to review". Benchmark: `reports/sonata-code-review/iteration-2/benchmark.md` (iteration 1: +24 pts, so better). Overall summary: `reports/sonata-code-review/summary.md`.

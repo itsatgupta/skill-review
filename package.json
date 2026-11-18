@@ -12,6 +12,7 @@
     "review": "node cli/review.cjs",
     "review:all": "node cli/review.cjs skills --out=reports",
     "evals:aggregate": "node scripts/aggregate-evals.cjs",
+    "summary": "node scripts/summarize.cjs",
     "dev": "vercel dev",
     "deploy": "npm run check && vercel deploy",
     "deploy:prod": "npm run check && vercel deploy --prod"
