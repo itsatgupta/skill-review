@@ -1,0 +1,40 @@
+{
+  "$comment": "Team settings for Skill Review. Used by the CLI, the web build and Claude Code. Rules: type 'forbid' fails when the pattern is found, 'require' fails when it is missing. file: 'SKILL.md' (body, default), 'description', or 'any' (every text file in the skill). Optional 'when': regex on the description; the rule only applies to skills it matches.",
+  "failOn": "blocker",
+  "passScore": 75,
+  "weights": { "meta": 25, "struct": 20, "content": 20, "pack": 15, "evals": 20 },
+  "allowedHosts": ["bravurasolutions.net", "bravurasolutions.com", "atlassian.net"],
+  "rules": [
+    {
+      "id": "T1",
+      "title": "No credentials or PATs pasted into instructions",
+      "type": "forbid",
+      "file": "any",
+      "pattern": "(personal access token|PAT)\\s*[:=]\\s*[A-Za-z0-9_\\-]{20,}",
+      "severity": "blocker",
+      "category": "pack",
+      "fix": "Remove the token, rotate it, and read it from an environment variable."
+    },
+    {
+      "id": "T2",
+      "title": "Skill states its target surface (Claude Code, Claude.ai, Cursor)",
+      "type": "require",
+      "file": "any",
+      "pattern": "claude code|claude\\.ai|cursor|agent sdk",
+      "severity": "info",
+      "category": "content",
+      "fix": "Say where the skill is meant to run, and which tools it expects."
+    },
+    {
+      "id": "T3",
+      "title": "Read-only intent is explicit for review skills",
+      "when": "review|audit|inspect",
+      "type": "require",
+      "file": "SKILL.md",
+      "pattern": "read-only|do not (edit|modify|commit)|never (edit|commit|push)",
+      "severity": "minor",
+      "category": "content",
+      "fix": "Review and audit skills should say they do not change code, and when changes are allowed."
+    }
+  ]
+}

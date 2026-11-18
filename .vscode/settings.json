@@ -1,0 +1,36 @@
+{
+  "files.exclude": {
+    "**/node_modules": true,
+    ".vercel": true
+  },
+  "search.exclude": {
+    "public/index.html": true,
+    "dist/**": true,
+    "reports/**": true,
+    "skills/**/node_modules": true
+  },
+  "files.readonlyInclude": {
+    "public/index.html": true,
+    "dist/*.html": true
+  },
+  "files.associations": {
+    "SKILL.md": "markdown",
+    "*.cjs": "javascript"
+  },
+  "json.schemas": [
+    {
+      "fileMatch": ["skill-review.config.json"],
+      "url": "./schemas/skill-review.config.schema.json"
+    },
+    {
+      "fileMatch": ["**/evals/evals.json"],
+      "url": "./schemas/evals.schema.json"
+    }
+  ],
+  "editor.formatOnSave": false,
+  "[markdown]": { "editor.wordWrap": "on" },
+  "markdownlint.config": { "MD013": false, "MD033": false, "MD041": false },
+  "terminal.integrated.env.linux": { "SKILL_REVIEW_ROOT": "${workspaceFolder}" },
+  "terminal.integrated.env.osx": { "SKILL_REVIEW_ROOT": "${workspaceFolder}" },
+  "terminal.integrated.env.windows": { "SKILL_REVIEW_ROOT": "${workspaceFolder}" }
+}

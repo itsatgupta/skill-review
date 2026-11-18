@@ -1,0 +1,65 @@
+{
+  "version": "2.0.0",
+  "inputs": [
+    {
+      "id": "skillPath",
+      "type": "promptString",
+      "description": "Skill folder (or skills repo) to review",
+      "default": "skills"
+    },
+    {
+      "id": "iteration",
+      "type": "promptString",
+      "description": "Eval iteration folder",
+      "default": "reports/<skill>/iteration-1"
+    }
+  ],
+  "tasks": [
+    {
+      "label": "Skill Review: build + test",
+      "type": "shell",
+      "command": "npm run check",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Skill Review: run tests",
+      "type": "shell",
+      "command": "npm test",
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Skill Review: review a skill (static)",
+      "type": "shell",
+      "command": "node cli/review.cjs \"${input:skillPath}\" --out=reports --fail-on=none",
+      "problemMatcher": []
+    },
+    {
+      "label": "Skill Review: review current file's skill",
+      "type": "shell",
+      "command": "node cli/review.cjs \"${fileDirname}\" --out=reports --fail-on=none",
+      "problemMatcher": []
+    },
+    {
+      "label": "Skill Review: aggregate evals",
+      "type": "shell",
+      "command": "node scripts/aggregate-evals.cjs \"${input:iteration}\"",
+      "problemMatcher": []
+    },
+    {
+      "label": "Skill Review: local web app (vercel dev)",
+      "type": "shell",
+      "command": "vercel dev",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Skill Review: open Claude Code here",
+      "type": "shell",
+      "command": "claude",
+      "presentation": { "panel": "dedicated", "focus": true },
+      "problemMatcher": []
+    }
+  ]
+}

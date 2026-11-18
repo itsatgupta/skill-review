@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: inspection report from a quality lab — precise, plain, verdict first.
+   IDEA: a certificate of inspection; every skill gets a stamped verdict and a punch list.
+   PICTURE: the scorecard — big score, release stamp, five category bars — then the punch list.
+   COLOUR and TYPE: newspaper desk pink ground, ink, teal for pass, claret for fail; Libre Franklin 800/400.
+   LAYOUT: drop zone strip, then scorecard + findings; tabs for AI review, evals, export; portfolio table when many. */
+:root{color-scheme:light dark;
+--bg:light-dark(#ffe3dc,#1c1512);--ink:light-dark(#1a1817,#f4ebe6);--soft:light-dark(#5d5450,#b9aca5);
+--card:light-dark(#fff6f2,#271d19);--line:light-dark(#efc9bf,#3d2f29);
+--teal:light-dark(#0d7680,#3fb6bf);--claret:light-dark(#990f3d,#ef5b86);--amber:light-dark(#a85a12,#f0a24c);--grey:light-dark(#7a706b,#998c86)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Libre Franklin",system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(20px,3.4vw,48px) max(5vw,16px)}.wrap{max-width:1240px;margin:0 auto}
+h1{font-weight:800;font-size:clamp(30px,4.4vw,48px);line-height:1.05;margin:0 0 10px;text-wrap:balance}
+h2{font-weight:800;font-size:24px;line-height:1.15;margin:0 0 12px}h3{font-size:17px;margin:18px 0 8px}
+p{margin:0 0 10px;max-width:70ch}.soft{color:var(--soft)}.small{font-size:13px}
+a{color:var(--teal)}
+button,.btn{font:600 15px/1 "Libre Franklin",sans-serif;min-height:44px;padding:0 18px;border-radius:6px;border:1.5px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer}
+button.ghost{background:transparent;color:var(--ink)}button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+#drop{border:2px dashed var(--ink);border-radius:10px;padding:18px 20px;display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;background:var(--card)}
+#drop.over{border-color:var(--teal);background:color-mix(in srgb,var(--teal) 12%,var(--card))}
+#drop strong{font-size:18px}
+textarea{width:100%;min-height:180px;font:14px/1.45 ui-monospace,Menlo,monospace;border:1.5px solid var(--line);border-radius:6px;padding:10px;background:var(--card);color:var(--ink)}
+.status{min-height:22px;font-size:14px;color:var(--soft);margin-top:8px}
+.score{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:clamp(18px,3vw,40px);align-items:start;margin-top:18px}
+.dial{background:var(--card);border-radius:12px;padding:22px;border:1px solid var(--line)}
+.big{font-weight:800;font-size:clamp(64px,9vw,96px);line-height:.9;letter-spacing:-.02em}
+.big small{font-size:22px;color:var(--soft);font-weight:600;letter-spacing:0}
+.stamp{display:inline-block;margin-top:14px;padding:8px 14px;border:3px solid currentColor;border-radius:6px;font-weight:800;font-size:18px;transform:rotate(-3deg)}
+.g-Fail{color:var(--claret)}.g-Conditional{color:var(--amber)}.g-Pass{color:var(--teal)}
+.bars{display:grid;gap:12px}
+.bar{display:grid;grid-template-columns:minmax(0,240px) minmax(0,1fr) 44px;gap:12px;align-items:center;font-size:15px}
+.track{height:14px;background:var(--line);border-radius:7px;overflow:hidden}.fill{height:100%;border-radius:7px;background:var(--teal);transition:width .6s}
+.fill.lo{background:var(--claret)}.fill.mid{background:var(--amber)}.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.stats{display:flex;flex-wrap:wrap;gap:6px 22px;margin-top:16px;font-size:14px;color:var(--soft)}.stats b{color:var(--ink)}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--ink);margin:26px 0 18px;overflow-x:auto}
+.tabs button{border:0;border-radius:6px 6px 0 0;background:transparent;color:var(--ink);flex:none}
+.tabs button[aria-selected=true]{background:var(--ink);color:var(--bg)}
+table{width:100%;border-collapse:collapse;font-size:15px}th{text-align:left;font-size:13px;color:var(--soft);font-weight:600;border-bottom:1.5px solid var(--ink);padding:8px 8px}
+td{border-bottom:1px solid var(--line);padding:10px 8px;vertical-align:top}td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sev{display:inline-block;font-size:12px;font-weight:800;padding:3px 8px;border-radius:4px;color:#fff;white-space:nowrap}
+.s-blocker{background:var(--claret)}.s-major{background:var(--amber)}.s-minor{background:var(--teal)}.s-info{background:var(--grey)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}.chips button{min-height:36px;padding:0 12px;font-size:14px}
+.chips button[aria-pressed=false]{background:transparent;color:var(--ink)}
+ul.plain{padding-left:20px;margin:6px 0}ul.plain li{margin:4px 0}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px}
+.dots{display:inline-flex;gap:4px;vertical-align:middle}.dots i{width:12px;height:12px;border-radius:50%;background:var(--line)}.dots i.on{background:var(--teal)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:10px 0 18px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}.kpi b{display:block;font-size:34px;font-weight:800;line-height:1.1}
+.ok{color:var(--teal);font-weight:700}.bad{color:var(--claret);font-weight:700}
+pre{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px;font-size:13px;max-height:420px;overflow:auto;white-space:pre-wrap}
+details{margin-top:14px}summary{cursor:pointer;font-weight:600;min-height:32px}
+#port tr{cursor:pointer}#port tr.sel td{background:color-mix(in srgb,var(--teal) 12%,transparent)}
+.empty{padding:30px;text-align:center;color:var(--soft);border:1px dashed var(--line);border-radius:10px}
+.progress{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin:10px 0}.progress i{display:block;height:100%;background:var(--teal);width:0;transition:width .3s}
+footer{border-top:2px solid var(--ink)}
+pre,.scroll{overflow-x:auto}code{overflow-wrap:anywhere}
+@media(max-width:760px){.score{grid-template-columns:1fr}.bar{grid-template-columns:minmax(0,1fr) 44px}.bar .track{grid-column:1/-1;order:3}}
+@media(max-width:600px){table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:7em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:6.5em;margin-inline-start:-7em;white-space:normal;color:var(--soft);font-size:12px}.stack td:empty{display:none}.stack tr{border-bottom:1px solid var(--line)}}
+@media(prefers-reduced-motion:reduce){.fill{transition:none}}
+</style>
+<script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+<header class="band" style="padding-bottom:8px"><div class="wrap">
+  <h1 id="headline">Skill review</h1>
+  <p class="soft" id="sub">Checks a Claude skill against Anthropic's skill-authoring standards, then tests it with evals: does it trigger on the right prompts, and does it beat no skill at all?</p>
+  <div id="drop" tabindex="0">
+    <div><strong>Drop skills here</strong><div class="soft small">A .zip (one skill or a whole skills repo), a skill folder, or SKILL.md and its files. Nothing leaves your browser except what you send to Claude for the AI review.</div></div>
+    <div class="row">
+      <label class="btn" for="fz" style="display:inline-flex;align-items:center">Choose .zip / files</label>
+      <input id="fz" type="file" multiple accept=".zip,.md,.json,.py,.sh,.txt,.yaml,.yml" hidden>
+      <label class="btn ghost" for="fd" style="display:inline-flex;align-items:center;background:transparent;color:var(--ink)">Choose folder</label>
+      <input id="fd" type="file" webkitdirectory multiple hidden>
+      <button class="ghost" id="pasteBtn">Paste SKILL.md</button>
+    </div>
+  </div>
+  <div id="pasteBox" hidden style="margin-top:12px"><textarea id="pasteTxt" placeholder="---&#10;name: my-skill&#10;description: …&#10;---&#10;# My skill"></textarea><div class="row" style="margin-top:8px"><button id="pasteGo">Review pasted skill</button></div></div>
+  <div class="status" id="status" aria-live="polite"></div>
+</div></header>
+
+<section class="band" style="padding-top:0" id="portBand" hidden><div class="wrap">
+  <h2>Portfolio</h2>
+  <div class="scroll"><table id="port" class="stack"><thead><tr><th>Skill</th><th>Score</th><th>Gate</th><th>Blockers</th><th>Majors</th><th>AI rubric</th><th>Trigger acc.</th><th>Skill vs none</th><th>Reviewed</th></tr></thead><tbody></tbody></table></div>
+</div></section>
+
+<main class="band" style="padding-top:0"><div class="wrap" id="report"></div></main>
+
+<footer class="band"><div class="wrap">
+  <h2>How the review works</h2>
+  <div class="cols">
+    <div><h3>1 · Static checks (instant, repeatable)</h3><p class="small">About 40 rules from the Agent Skills spec and Anthropic's <a href="https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices">skill authoring best practices</a>: name and description rules, a body under 500 lines, references one level deep, a contents list in long files, no time-sensitive wording, examples, an output format, evals shipped. Packaging rules add secrets, .env files, dependency folders and junk files. Blocker −40, major −15, minor −5 per category; categories are weighted 25/20/20/15/20.</p></div>
+    <div><h3>2 · AI review (Claude reads the skill)</h3><p class="small">Claude scores seven dimensions from 1 to 5: trigger precision, clarity, token economy, degrees of freedom, edge cases, output spec and safety. It also drafts an eval suite: should-trigger prompts, near-miss prompts that should not trigger, and self-contained task cases with checkable assertions.</p></div>
+    <div><h3>3 · Evals (does it work, and beat no skill?)</h3><p class="small"><b>Trigger test:</b> Claude picks a skill for each prompt from this skill plus decoys, which gives accuracy, precision and recall. <b>A/B test:</b> each task runs with the skill and without it, and a blind grader scores both against the assertions. These runs are simulated: no tools, inputs inline. Run the exported evals.json in Claude Code with skill-creator for full tool-using runs.</p></div>
+  </div>
+  <p class="small soft" style="margin-top:14px"><b>Release gate.</b> Pass means no blockers, no majors and a score of at least 75, plus, once evals have run, trigger accuracy of at least 80% and a with-skill pass rate at or above baseline. Conditional means no blockers but something short of Pass. Fail means at least one blocker.</p>
+</div></footer>
+
+<script>
+/*__ENGINE__*/
+</script>
+<script>
+{
+const SAMPLE = null;
+const CONFIG = /*__CONFIG__*/{};
+const NO_AI_MSG = /*__NOAI__*/'';
+const DECOYS = [
+ ['docx','Creates, reads and edits Word documents (.docx). Use when the user mentions Word files or wants a .docx.'],
+ ['pdf','Reads, merges, splits and fills PDF files. Use for any task involving a .pdf.'],
+ ['xlsx','Creates and edits spreadsheets, formulas and charts in .xlsx/.csv. Use when a spreadsheet is the input or output.'],
+ ['generic-code-review','Reviews code diffs for bugs, style and security in any language. Use when asked to review code or a pull request.'],
+ ['git-helper','Explains and runs git commands: branches, rebases, merge conflicts, history. Use for git questions.'],
+ ['unit-test-writer','Writes unit tests (JUnit, pytest, Jest) for given code. Use when the user asks for tests.'],
+ ['jira-assistant','Creates, updates and searches Jira issues and sprints. Use when the user mentions Jira tickets.'],
+ ['sql-helper','Writes and optimises SQL queries and explains query plans. Use for SQL questions.'],
+ ['release-notes','Drafts release notes and changelogs from commits or tickets.'],
+ ['meeting-notes','Summarises meeting transcripts into decisions and action items.'],
+];
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const E = SR_ENGINE;
+let skills = [], cur = null, tab = 'findings', sevOn = {blocker:1,major:1,minor:1,info:1}, busy = null;
+let sample = null, downloads = null;
+
+/* ---------- persistence (light, per browser) ---------- */
+const KEY = 'skill-review-v1';
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(skills.filter(s=>!s.sample).map(({payload, ...r})=>r))); }catch(e){} }
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY)||'[]'); }catch(e){ return []; } }
+
+/* ---------- input ---------- */
+const status = t => { $('#status').textContent = t; };
+const isText = p => E.TEXT_EXT.test(p) || /(^|\/)\.env/.test(p) || /(^|\/)SKILL\.md$/i.test(p);
+async function fromZip(file){
+  const zip = await JSZip.loadAsync(file); const out = []; const jobs = [];
+  zip.forEach((p, en) => { if (en.dir) return; const size = (en._data && en._data.uncompressedSize) || 0;
+    const rec = {path:p, size, text:null}; out.push(rec);
+    if (!E.DEP_DIRS.test(p) && size < 2e6 && isText(p)) jobs.push(en.async('string').then(t => rec.text = t)); });
+  await Promise.all(jobs); return out;
+}
+async function fromFiles(list){
+  const out = [];
+  for (const f of list) {
+    const p = f._rel || f.webkitRelativePath || f.name;
+    if (/\.zip$/i.test(f.name)) { out.push(...(await fromZip(f)).map(x => ({...x, path:(list.length>1?f.name.replace(/\.zip$/i,'')+'/':'')+x.path}))); continue; }
+    out.push({path:p, size:f.size, text: (!E.DEP_DIRS.test(p) && f.size < 2e6 && isText(p)) ? await f.text() : null});
+  }
+  return out;
+}
+async function walkEntry(entry, prefix, acc){
+  if (entry.isFile) { const f = await new Promise((res, rej) => entry.file(res, rej)); f._rel = prefix + f.name; acc.push(f); }
+  else if (entry.isDirectory) {
+    if (E.DEP_DIRS.test(prefix + entry.name + '/')) { acc.push({name:entry.name+'/(dependency folder)', _rel:prefix+entry.name+'/.bundled', size:0, text:async()=>'' }); return; }
+    const r = entry.createReader(); let batch;
+    do { batch = await new Promise((res, rej) => r.readEntries(res, rej)); for (const e of batch) await walkEntry(e, prefix + entry.name + '/', acc); } while (batch.length);
+  }
+}
+function splitSkills(files){
+  const roots = files.filter(f => /(^|\/)SKILL\.md$/i.test(f.path) && !E.DEP_DIRS.test(f.path)).map(f => f.path.includes('/') ? f.path.slice(0, f.path.lastIndexOf('/')) : '');
+  if (roots.length <= 1) return [files];
+  return roots.map(r => files.filter(f => r === '' ? !f.path.includes('/') : f.path.startsWith(r + '/')));
+}
+function payloadOf(files){
+  const sk = files.filter(f => /(^|\/)SKILL\.md$/i.test(f.path)).sort((a,b)=>a.path.split('/').length-b.path.split('/').length)[0];
+  if (!sk) return null;
+  const root = sk.path.includes('/') ? sk.path.slice(0, sk.path.lastIndexOf('/') + 1) : '';
+  let txt = `=== SKILL.md ===\n${sk.text}\n`, budget = 110000 - txt.length;
+  const refs = files.filter(f => f !== sk && f.text && /\.md$/i.test(f.path) && f.path.startsWith(root) && !E.DEP_DIRS.test(f.path) && f.path.slice(root.length).split('/').length <= 2);
+  for (const r of refs) { if (budget < 1500) break; const take = r.text.slice(0, Math.min(14000, budget - 200)); txt += `\n=== ${r.path.slice(root.length)} ${take.length < r.text.length ? '(truncated)' : ''} ===\n${take}\n`; budget -= take.length + 60; }
+  const tree = files.filter(f => !E.DEP_DIRS.test(f.path)).map(f => f.path.slice(root.length)).slice(0, 80).join('\n');
+  return { text: txt, tree, skillMd: sk.text };
+}
+async function ingest(files, label){
+  if (!files.length) { status('No files found in that upload.'); return; }
+  const groups = splitSkills(files); let added = 0;
+  for (const g of groups) {
+    const r = E.analyze(g, CONFIG); const id = r.name + '@' + Date.now() + Math.random().toString(36).slice(2,6);
+    skills = skills.filter(s => s.name !== r.name);
+    skills.unshift({id, name:r.name, report:r, payload:payloadOf(g), ai:null, trigger:null, ab:null}); added++;
+    cur = id;
+  }
+  save(); tab = 'findings'; render();
+  status(`Reviewed ${added} skill${added>1?'s':''} from ${label}. Run the AI review and evals from the tabs below.`);
+}
+async function handleList(list, label){ try{ status('Reading files…'); await ingest(await fromFiles([...list]), label); } catch(e){ status('Could not read that upload: ' + e.message); } }
+$('#fz').addEventListener('change', e => handleList(e.target.files, e.target.files.length === 1 ? e.target.files[0].name : e.target.files.length + ' files'));
+$('#fd').addEventListener('change', e => handleList(e.target.files, 'folder'));
+$('#pasteBtn').addEventListener('click', () => { $('#pasteBox').hidden = !$('#pasteBox').hidden; });
+$('#pasteGo').addEventListener('click', () => { const t = $('#pasteTxt').value; if (!t.trim()) return; const nm = (/name:\s*([^\n]+)/.exec(t)||[])[1]?.trim() || 'pasted-skill'; ingest([{path:nm + '/SKILL.md', size:t.length, text:t}], 'pasted text'); });
+const dz = $('#drop');
+['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('over'); }));
+['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('over'); }));
+dz.addEventListener('drop', async e => {
+  const items = [...(e.dataTransfer.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+  if (items.some(i => i.isDirectory)) { const acc = []; status('Reading folder…'); for (const it of items) await walkEntry(it, '', acc); handleList(acc, 'dropped folder'); }
+  else handleList(e.dataTransfer.files, e.dataTransfer.files.length === 1 ? e.dataTransfer.files[0].name : 'dropped files');
+});
+
+/* ---------- combined verdict ---------- */
+function verdict(s){
+  const r = s.report; let score = r.score, gate = r.gate; const why = [];
+  if (s.ai && s.ai.rubric) { const avg = s.ai.rubric.reduce((a, d) => a + (+d.score || 0), 0) / s.ai.rubric.length; s.aiScore = Math.round(avg / 5 * 100); score = Math.round(r.score * .6 + s.aiScore * .4); }
+  if (gate !== 'Fail') {
+    if (s.trigger && s.trigger.acc < .8) { gate = 'Conditional'; why.push('trigger accuracy under 80%'); }
+    if (s.ab && s.ab.withRate < s.ab.withoutRate) { gate = 'Conditional'; why.push('the skill scores below the no-skill baseline'); }
+    if (score < 75) gate = 'Conditional';
+  }
+  const grade = score >= 90 ? 'A' : score >= 80 ? 'B' : score >= 70 ? 'C' : score >= 60 ? 'D' : 'E';
+  return { score, gate, grade, why };
+}
+const gateWord = g => g === 'Fail' ? 'Not release-ready' : g === 'Conditional' ? 'Conditional' : 'Release-ready';
+const pct = x => x == null ? '—' : Math.round(x * 100) + '%';
+
+/* ---------- render ---------- */
+function render(){
+  const s = skills.find(x => x.id === cur) || skills[0]; if (s) cur = s.id;
+  renderPortfolio();
+  if (!s) { $('#report').innerHTML = '<div class="empty">Drop a skill above to get its report.</div>'; return; }
+  const r = s.report, v = verdict(s);
+  const top = r.findings.filter(f => f.sev === 'blocker' || f.sev === 'major');
+  $('#headline').textContent = `${s.name}: ${v.score}/100, ${gateWord(v.gate).toLowerCase()}`;
+  $('#sub').textContent = top.length ? `${r.counts.blocker} blocker${r.counts.blocker!==1?'s':''} and ${r.counts.major} major issue${r.counts.major!==1?'s':''} to fix first, led by “${top[0].title.toLowerCase()}”.` : 'No blockers or major issues from the static checks. Run the AI review and evals to confirm it works.';
+  const st = r.stats || {};
+  $('#report').innerHTML = `
+  ${s.sample ? '<p class="small soft"></p>' : ''}
+  <div class="score">
+    <div class="dial"><div class="big">${v.score}<small> /100 · ${v.grade}</small></div>
+      <div class="stamp g-${v.gate}">${gateWord(v.gate)}</div>
+      ${v.why.length ? `<p class="small soft" style="margin-top:10px">Held at conditional: ${esc(v.why.join('; '))}.</p>` : ''}
+      <p class="small soft" style="margin-top:12px">${s.ai ? 'Static 60% + AI rubric 40%.' : 'Static checks only. The AI review adds a rubric score.'}</p></div>
+    <div><div class="bars">${r.cats.map(c => `<div class="bar"><span>${esc(c.name)}</span><div class="track"><div class="fill ${c.score<50?'lo':c.score<75?'mid':''}" style="width:${c.score}%"></div></div><span class="num">${c.score}</span></div>`).join('')}
+      ${s.aiScore != null ? `<div class="bar"><span><b>AI rubric</b></span><div class="track"><div class="fill ${s.aiScore<50?'lo':s.aiScore<75?'mid':''}" style="width:${s.aiScore}%"></div></div><span class="num">${s.aiScore}</span></div>` : ''}</div>
+      <div class="stats"><span><b>${(st.ownFiles ?? st.files ?? 0).toLocaleString()}</b> skill files</span>${st.depFiles ? `<span><b>${st.depFiles.toLocaleString()}</b> dependency files</span>` : ''}<span><b>${st.bodyLines ?? '—'}</b> body lines</span><span><b>${(st.bodyTokens||0).toLocaleString()}</b> body tokens</span><span><b>${st.refs ?? 0}</b> reference files</span><span><b>${st.evals ?? 0}</b> eval cases</span>${st.size ? `<span><b>${E.fmtKB(st.size)}</b> total</span>` : ''}</div>
+      <div class="row" style="margin-top:12px">${['blocker','major','minor','info'].map(k => `<span class="sev s-${k}">${r.counts[k]} ${k}</span>`).join('')}</div>
+    </div>
+  </div>
+  <div class="tabs" role="tablist">${[['findings','Findings'],['ai','AI review'],['evals','Evals'],['export','Export']].map(([k,l]) => `<button role="tab" aria-selected="${tab===k}" data-tab="${k}">${l}</button>`).join('')}</div>
+  <div id="pane"></div>`;
+  document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { tab = b.dataset.tab; render(); });
+  ({findings:paneFindings, ai:paneAI, evals:paneEvals, export:paneExport})[tab](s);
+}
+function renderPortfolio(){
+  const list = skills.filter(s => s.report);
+  $('#portBand').hidden = list.length < 2;
+  $('#port tbody').innerHTML = list.map(s => { const v = verdict(s); return `<tr data-id="${s.id}" class="${s.id===cur?'sel':''}" tabindex="0"><td><b>${esc(s.name)}</b>${s.sample?' <span class="soft small">(sample)</span>':''}</td><td class="n">${v.score}</td><td><span class="g-${v.gate}"><b>${gateWord(v.gate)}</b></span></td><td class="n">${s.report.counts.blocker}</td><td class="n">${s.report.counts.major}</td><td class="n">${s.aiScore ?? '—'}</td><td class="n">${s.trigger ? pct(s.trigger.acc) : '—'}</td><td class="n">${s.ab ? pct(s.ab.withRate) + ' vs ' + pct(s.ab.withoutRate) : '—'}</td><td class="small soft">${new Date(s.report.at).toLocaleDateString()}</td></tr>`; }).join('');
+  document.querySelectorAll('#port tr[data-id]').forEach(tr => { const go = () => { cur = tr.dataset.id; render(); }; tr.onclick = go; tr.onkeydown = e => { if (e.key === 'Enter') go(); }; });
+}
+function paneFindings(s){
+  const r = s.report, fs = r.findings.filter(f => sevOn[f.sev]);
+  $('#pane').innerHTML = `<div class="chips">${['blocker','major','minor','info'].map(k => `<button aria-pressed="${!!sevOn[k]}" data-sev="${k}">${k} (${r.counts[k]})</button>`).join('')}</div>
+  ${fs.length ? `<table class="stack"><thead><tr><th>Severity</th><th>Check</th><th>Evidence</th><th>Fix</th><th>Standard</th></tr></thead><tbody>${fs.map(f => `<tr><td><span class="sev s-${f.sev}">${f.sev}</span></td><td><b>${esc(f.title)}</b> <span class="soft small">${f.id}</span></td><td class="small">${esc(f.evidence)}</td><td class="small">${esc(f.fix)}</td><td class="small soft">${esc(f.std)}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">No findings at the selected severities.</div>'}
+  ${r.strengths.length ? `<h3>What the skill already does well</h3><ul class="plain">${r.strengths.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+  ${s.ai && s.ai.issues ? `<h3>Issues from the AI review</h3><table class="stack"><thead><tr><th>Severity</th><th>Issue</th><th>Evidence</th><th>Fix</th></tr></thead><tbody>${s.ai.issues.map(f => `<tr><td><span class="sev s-${esc(f.severity)}">${esc(f.severity)}</span></td><td><b>${esc(f.title)}</b></td><td class="small">${esc(f.evidence)}</td><td class="small">${esc(f.fix)}</td></tr>`).join('')}</tbody></table>` : ''}`;
+  document.querySelectorAll('[data-sev]').forEach(b => b.onclick = () => { sevOn[b.dataset.sev] = !sevOn[b.dataset.sev]; render(); });
+}
+
+/* ---------- AI review ---------- */
+const DIMS = ['Trigger precision','Instruction clarity','Conciseness and token economy','Degrees of freedom','Robustness and edge cases','Output specification','Safety and guardrails'];
+function needPayload(s){ return !s.payload ? `<div class="empty">This report was loaded from history, so the skill’s text isn’t in memory. Drop the skill in again to run this.</div>` : ''; }
+function noSample(){ return `<div class="empty">${NO_AI_MSG}</div>`; }
+function paneAI(s){
+  if (!sample) { $('#pane').innerHTML = noSample(); return; }
+  const gate = needPayload(s); if (gate && !s.ai) { $('#pane').innerHTML = gate; return; }
+  const a = s.ai;
+  $('#pane').innerHTML = `<div class="row" style="margin-bottom:14px"><button id="runAI" ${busy||!s.payload?'disabled':''}>${a ? 'Re-run AI review' : 'Run AI review'}</button><span class="small soft">Sends SKILL.md, its linked references (trimmed to about 110k characters) and the static findings to Claude. Takes about a minute.</span></div>
+  <div id="aiLive"></div>
+  ${a ? `<p><b>${esc(a.summary)}</b></p>
+  <table class="stack"><thead><tr><th>Dimension</th><th>Score</th><th>Why</th></tr></thead><tbody>${a.rubric.map(d => `<tr><td><b>${esc(d.dimension)}</b></td><td class="n"><span class="dots">${[1,2,3,4,5].map(i => `<i class="${i<=d.score?'on':''}"></i>`).join('')}</span> ${d.score}/5</td><td class="small">${esc(d.rationale)}</td></tr>`).join('')}</tbody></table>
+  ${a.strengths?.length ? `<h3>Strengths</h3><ul class="plain">${a.strengths.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+  <p class="small soft">The AI review’s issues are listed under Findings. The eval suite it drafted is under Evals.</p>` : ''}`;
+  const b = $('#runAI'); if (b) b.onclick = () => runAI(s);
+}
+async function runAI(s){
+  busy = 'ai'; render(); const live = $('#aiLive'); live.innerHTML = '<p class="soft">Claude is reading the skill…</p>';
+  const findings = s.report.findings.map(f => `- [${f.sev}] ${f.title}: ${f.evidence}`).join('\n');
+  const prompt = `You are a principal reviewer of Claude Agent Skills (SKILL.md packages). Review the skill below against Anthropic's skill authoring best practices: the description says what the skill does and when to use it, in the third person, with the terms users say; the body is concise (Claude is already smart, so only add what it lacks); degrees of freedom match how fragile the task is; progressive disclosure, with references one level deep; consistent terminology; concrete examples; workflows with checklists and validation loops; explicit handling of missing input and errors; no time-sensitive information; safe use of tools and data; evals written before heavy documentation.
+
+Static checks already found the following. Do not repeat them unless you add substance:
+${findings || '(none)'}
+
+File tree:
+${s.payload.tree}
+
+SKILL CONTENT:
+${s.payload.text}
+
+Return ONLY a JSON object with this exact shape:
+{"summary":"2-3 sentence verdict naming the biggest risk",
+ "rubric":[{"dimension":"<one of: ${DIMS.join(' | ')}>","score":1-5,"rationale":"one or two sentences, cite a section"}],  // exactly these 7 dimensions, in this order
+ "issues":[{"severity":"major|minor","title":"short","evidence":"section name or a quote under 20 words","fix":"concrete change"}],  // at most 8, ordered by impact
+ "strengths":["at most 4"],
+ "evals":{
+   "trigger":[{"prompt":"realistic user message","should_trigger":true,"why":"short"}],  // 10 items: 6 should trigger (varied phrasing, one terse, one indirect), 4 near-misses that should NOT trigger
+   "tasks":[{"id":"t1","prompt":"self-contained user request INCLUDING any input the skill needs inline (for example a short diff or file snippet), because the test runner has no tools or repo access","expected_output":"what a correct answer contains","assertions":["3-5 objectively checkable statements about the response"],"edge_case":false}]  // 5 tasks: 3 core, 2 edge cases
+ }}`;
+  try {
+    const out = await sample.json(prompt, { modelTier:'complex', onText: ({text}) => { live.innerHTML = `<p class="soft">Claude is writing the review… ${Math.round(text.length/100)/10}k characters</p>`; } });
+    if (!out || !Array.isArray(out.rubric)) throw { message: 'The review came back in an unexpected shape. Try again.' };
+    out.rubric = out.rubric.map(d => ({...d, score: Math.max(1, Math.min(5, Math.round(+d.score || 1)))}));
+    s.ai = out; save();
+  } catch (e) { busy = null; render(); $('#aiLive').innerHTML = `<p class="bad">${esc(e.code === 'rate_limited' ? 'Rate limited. Wait a minute and try again.' : e.code === 'not_granted' ? 'Permission to ask Claude was not granted.' : (e.message || 'AI review failed.'))}</p>`; return; }
+  busy = null; render();
+}
+
+/* ---------- Evals ---------- */
+function paneEvals(s){
+  if (!sample) { $('#pane').innerHTML = noSample(); return; }
+  const ev = s.ai && s.ai.evals;
+  if (!ev) { $('#pane').innerHTML = `<div class="empty">Run the AI review first: it drafts this skill’s eval suite (trigger prompts and task cases).${s.payload ? '' : ' Drop the skill in again to enable it.'}</div>`; return; }
+  const t = s.trigger, ab = s.ab;
+  $('#pane').innerHTML = `
+  <div class="kpis">
+    <div class="kpi"><span class="small soft">Trigger accuracy</span><b>${t ? pct(t.acc) : '—'}</b><span class="small soft">${t ? `precision ${pct(t.prec)} · recall ${pct(t.rec)}` : `${ev.trigger.length} prompts ready`}</span></div>
+    <div class="kpi"><span class="small soft">With skill</span><b>${ab ? pct(ab.withRate) : '—'}</b><span class="small soft">assertions passed</span></div>
+    <div class="kpi"><span class="small soft">Without skill</span><b>${ab ? pct(ab.withoutRate) : '—'}</b><span class="small soft">baseline</span></div>
+    <div class="kpi"><span class="small soft">Skill uplift</span><b class="${ab ? (ab.withRate >= ab.withoutRate ? 'ok' : 'bad') : ''}">${ab ? ((ab.withRate - ab.withoutRate) >= 0 ? '+' : '') + Math.round((ab.withRate - ab.withoutRate) * 100) + ' pts' : '—'}</b><span class="small soft">${ev.tasks.length} task cases</span></div>
+  </div>
+  <div class="row"><button id="runT" ${busy||!s.payload?'disabled':''}>Run trigger test</button><button id="runAB" ${busy||!s.payload?'disabled':''}>Run A/B: skill vs no skill</button>${busy ? '<button class="ghost" id="stop">Stop</button>' : ''}<span class="small soft">The A/B test makes about ${ev.tasks.length * 3} calls (3 per task).</span></div>
+  <div class="progress"><i id="prog"></i></div><div class="small soft" id="evLive"></div>
+  <h3>Trigger prompts</h3>
+  <table class="stack"><thead><tr><th>Prompt</th><th>Should trigger</th><th>Claude picked</th><th>Result</th></tr></thead><tbody>${ev.trigger.map((p, i) => { const g = t && t.rows[i]; return `<tr><td class="small">${esc(p.prompt)}</td><td>${p.should_trigger ? 'Yes' : 'No (near-miss)'}</td><td class="small">${g ? esc(g.picked) : '—'}</td><td>${g ? (g.ok ? '<span class="ok">Correct</span>' : '<span class="bad">Wrong</span>') : '—'}</td></tr>`; }).join('')}</tbody></table>
+  <h3>Task cases</h3>
+  <table class="stack"><thead><tr><th>Case</th><th>Assertions</th><th>With skill</th><th>Without</th></tr></thead><tbody>${ev.tasks.map((c, i) => { const g = ab && ab.rows[i]; return `<tr><td class="small"><b>${esc(c.id)}</b>${c.edge_case ? ' <span class="sev s-minor">edge</span>' : ''}<br>${esc(String(c.prompt).slice(0, 220))}${String(c.prompt).length > 220 ? '…' : ''}</td><td class="small"><ul class="plain">${c.assertions.map((a, j) => `<li>${g ? (g.w[j] ? '✓ ' : '✗ ') : ''}${esc(a)}</li>`).join('')}</ul></td><td class="n">${g ? `${g.w.filter(Boolean).length}/${c.assertions.length}` : '—'}</td><td class="n">${g ? `${g.o.filter(Boolean).length}/${c.assertions.length}` : '—'}</td></tr>`; }).join('')}</tbody></table>
+  ${ab ? `<details><summary>Grader notes</summary><ul class="plain">${ab.rows.map(r => `<li class="small"><b>${esc(r.id)}</b>: ${esc(r.notes || '')}</li>`).join('')}</ul></details>` : ''}
+  <p class="small soft" style="margin-top:12px">Simulated runs: no tools and no repo access, with inputs given inline. They measure whether the skill’s instructions improve Claude’s answers. For full tool-using runs, export evals.json and run it in Claude Code with skill-creator.</p>`;
+  $('#runT').onclick = () => runTrigger(s); $('#runAB').onclick = () => runAB(s); const st = $('#stop'); if (st) st.onclick = () => { busy && busy.abort && busy.abort(); };
+}
+async function runTrigger(s){
+  const ctl = new AbortController(); busy = ctl; render();
+  const others = skills.filter(x => x.id !== s.id && x.report.desc).slice(0, 8).map(x => [x.name, x.report.desc]);
+  const cat = [[s.name, s.report.desc || ''], ...DECOYS, ...others].sort(() => Math.random() - .5);
+  const ev = s.ai.evals.trigger;
+  const prompt = `Claude has these skills installed (name: description):\n${cat.map(([n, d]) => `- ${n}: ${d}`).join('\n')}\n\nFor each user message below, decide which ONE skill Claude should load based only on the descriptions, or "none" if none clearly fits.\n${ev.map((p, i) => `${i + 1}. ${p.prompt}`).join('\n')}\n\nReturn ONLY JSON: [{"i":1,"skill":"name or none"}] with one entry per message.`;
+  try {
+    $('#evLive').textContent = 'Asking Claude to route each prompt…';
+    const out = await sample.json(prompt, { signal: ctl.signal });
+    const rows = ev.map((p, i) => { const pick = ((out.find(o => +o.i === i + 1) || {}).skill || 'none').trim(); const fired = pick === s.name; return { picked: pick, fired, ok: fired === !!p.should_trigger }; });
+    const tp = rows.filter((r, i) => r.fired && ev[i].should_trigger).length, fp = rows.filter((r, i) => r.fired && !ev[i].should_trigger).length, fn = rows.filter((r, i) => !r.fired && ev[i].should_trigger).length;
+    s.trigger = { rows, acc: rows.filter(r => r.ok).length / rows.length, prec: tp + fp ? tp / (tp + fp) : 0, rec: tp + fn ? tp / (tp + fn) : 0 }; save();
+  } catch (e) { busy = null; render(); $('#evLive').textContent = e.name === 'AbortError' ? 'Stopped.' : 'Trigger test failed: ' + (e.message || e.code); return; }
+  busy = null; render();
+}
+async function runAB(s){
+  const ctl = new AbortController(); busy = ctl; render();
+  const tasks = s.ai.evals.tasks, rows = []; const N = tasks.length * 3; let done = 0;
+  const tick = msg => { done++; const p = $('#prog'); if (p) p.style.width = (done / N * 100) + '%'; const l = $('#evLive'); if (l) l.textContent = msg; };
+  const rules = 'You have no tools and no file or network access in this run. Work only from what is in the message. Where a step would need a tool or a fetch, say in one line what you would do, then continue with the input you were given.';
+  try {
+    for (const c of tasks) {
+      const withOut = await sample(`<skill name="${s.name}">\n${s.payload.text.slice(0, 90000)}\n</skill>\n\nThe skill above is loaded. Follow it for this request. ${rules}\n\nUser request:\n${c.prompt}`, { signal: ctl.signal, modelTier:'default' }); tick(`${c.id}: ran with the skill`);
+      const noOut = await sample(`${rules}\n\nUser request:\n${c.prompt}`, { signal: ctl.signal, modelTier:'default' }); tick(`${c.id}: ran without the skill`);
+      const flip = Math.random() < .5; const A = flip ? noOut.text : withOut.text, B = flip ? withOut.text : noOut.text;
+      const g = await sample.json(`You are a strict, impartial grader. Check each assertion against each of two responses. An assertion passes only if the response clearly satisfies it.\n\nTask: ${c.prompt}\n\nExpected: ${c.expected_output}\n\nAssertions:\n${c.assertions.map((a, i) => `${i + 1}. ${a}`).join('\n')}\n\n=== RESPONSE A ===\n${A.slice(0, 30000)}\n\n=== RESPONSE B ===\n${B.slice(0, 30000)}\n\nReturn ONLY JSON: {"A":[true/false per assertion],"B":[true/false per assertion],"notes":"one sentence on the main difference"}`, { signal: ctl.signal }); tick(`${c.id}: graded`);
+      const w = (flip ? g.B : g.A) || [], o = (flip ? g.A : g.B) || [];
+      rows.push({ id: c.id, w: c.assertions.map((_, i) => !!w[i]), o: c.assertions.map((_, i) => !!o[i]), notes: String(g.notes || '').replace(/\bResponse ([AB])\b/g, (m, x) => ((x === 'A') !== flip) ? 'the with-skill response' : 'the no-skill response') });
+    }
+    const tot = rows.reduce((a, r) => a + r.w.length, 0) || 1;
+    s.ab = { rows, withRate: rows.reduce((a, r) => a + r.w.filter(Boolean).length, 0) / tot, withoutRate: rows.reduce((a, r) => a + r.o.filter(Boolean).length, 0) / tot }; save();
+  } catch (e) { busy = null; render(); $('#evLive').textContent = e.name === 'AbortError' ? 'Stopped.' : 'A/B run failed: ' + (e.message || e.code); return; }
+  busy = null; render();
+}
+
+/* ---------- Export ---------- */
+function mdReport(s){
+  const r = s.report, v = verdict(s), L = [];
+  L.push(`# Skill review: ${s.name}`, '', `**Verdict:** ${gateWord(v.gate)} · **Score:** ${v.score}/100 (${v.grade}) · Reviewed ${new Date(r.at).toLocaleString()}`, '');
+  if (s.ai) L.push(`> ${s.ai.summary}`, '');
+  L.push('## Scores', '', '| Category | Score |', '|---|---:|', ...r.cats.map(c => `| ${c.name} | ${c.score} |`), ...(s.aiScore != null ? [`| AI rubric | ${s.aiScore} |`] : []), '');
+  if (s.ai) L.push('## AI rubric', '', '| Dimension | Score | Rationale |', '|---|---:|---|', ...s.ai.rubric.map(d => `| ${d.dimension} | ${d.score}/5 | ${String(d.rationale).replace(/\|/g, '/')} |`), '');
+  if (s.trigger || s.ab) L.push('## Eval results', '', `- Trigger accuracy: ${s.trigger ? pct(s.trigger.acc) + ` (precision ${pct(s.trigger.prec)}, recall ${pct(s.trigger.rec)})` : 'not run'}`, `- Assertions passed with skill: ${s.ab ? pct(s.ab.withRate) : 'not run'} · without skill: ${s.ab ? pct(s.ab.withoutRate) : 'not run'}`, '');
+  L.push('## Findings', '', '| Severity | Check | Evidence | Fix |', '|---|---|---|---|', ...r.findings.map(f => `| ${f.sev} | ${f.title} | ${String(f.evidence).replace(/\|/g, '/')} | ${f.fix} |`), ...(s.ai?.issues || []).map(f => `| ${f.severity} (AI) | ${f.title} | ${String(f.evidence).replace(/\|/g, '/')} | ${f.fix} |`), '');
+  if (r.strengths.length) L.push('## Strengths', '', ...r.strengths.map(x => `- ${x}`), ...(s.ai?.strengths || []).map(x => `- ${x}`), '');
+  L.push('---', 'Standards: Agent Skills spec; Anthropic skill authoring best practices; skill-creator eval loop.');
+  return L.join('\n');
+}
+function evalsJson(s){
+  const ev = s.ai && s.ai.evals; if (!ev) return null;
+  return JSON.stringify({ skill_name: s.name, evals: ev.tasks.map((c, i) => ({ id: i + 1, prompt: c.prompt, expected_output: c.expected_output, files: [], assertions: c.assertions, edge_case: !!c.edge_case })), trigger_evals: ev.trigger.map(p => ({ query: p.prompt, should_trigger: !!p.should_trigger })) }, null, 2);
+}
+function paneExport(s){
+  const md = mdReport(s), ej = evalsJson(s);
+  $('#pane').innerHTML = `<div class="cols">
+   <div class="card"><h3 style="margin-top:0">Report (Markdown)</h3><p class="small soft">Paste into Confluence, a PR or Jira, or save it next to the skill.</p><div class="row"><button data-copy="md">Copy</button>${downloads ? '<button class="ghost" data-dl="md">Download .md</button>' : ''}</div><pre id="mdOut">${esc(md)}</pre></div>
+   <div class="card"><h3 style="margin-top:0">evals/evals.json</h3><p class="small soft">skill-creator format. Commit it to the skill’s evals/ folder so every change can be re-tested.</p>${ej ? `<div class="row"><button data-copy="ej">Copy</button>${downloads ? '<button class="ghost" data-dl="ej">Download</button>' : ''}</div><pre id="ejOut">${esc(ej)}</pre>` : '<div class="empty">Run the AI review to draft the eval suite.</div>'}</div>
+  </div><p class="small soft" id="exMsg" style="margin-top:10px"></p>`;
+  const data = { md: [s.name + '-review.md', md], ej: ['evals.json', ej] };
+  document.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(data[b.dataset.copy][1]); $('#exMsg').textContent = 'Copied.'; } catch (e) { const r = document.createRange(); r.selectNodeContents($(b.dataset.copy === 'md' ? '#mdOut' : '#ejOut')); getSelection().removeAllRanges(); getSelection().addRange(r); $('#exMsg').textContent = 'Selected. Press Ctrl+C or Cmd+C to copy.'; } });
+  document.querySelectorAll('[data-dl]').forEach(b => b.onclick = async () => { try { await downloads.save({ filename: data[b.dataset.dl][0], data: data[b.dataset.dl][1] }); } catch (e) { $('#exMsg').textContent = 'Download was not completed.'; } });
+}
+
+/* ---------- boot ---------- */
+skills = load().map(x => ({...x, payload:null}));
+if (SAMPLE && !skills.some(x => x.name === SAMPLE.name)) skills.push({ id:'sample', name:SAMPLE.name, report:SAMPLE, sample:true, payload:null, ai:null, trigger:null, ab:null });
+cur = skills[0] && skills[0].id; render();
+/*__BOOT__*/
+}
+</script>
+</body>
+</html>

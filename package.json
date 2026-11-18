@@ -1,0 +1,19 @@
+{
+  "name": "skill-review",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Review Claude Agent Skills against Anthropic authoring standards: static checks, AI rubric, trigger and A/B evals.",
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "build": "node scripts/build.cjs",
+    "test": "node --test tests/engine.test.cjs",
+    "check": "npm run build && npm test",
+    "review": "node cli/review.cjs",
+    "review:all": "node cli/review.cjs skills --out=reports",
+    "evals:aggregate": "node scripts/aggregate-evals.cjs",
+    "dev": "vercel dev",
+    "deploy": "npm run check && vercel deploy",
+    "deploy:prod": "npm run check && vercel deploy --prod"
+  }
+}
